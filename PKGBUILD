@@ -35,15 +35,35 @@
 _os="$(
   uname \
     -o)"
-_offline="false"
-_git="false"
+_evmfs_available="$( \
+  command \
+    -v \
+    "evmfs" || \
+    true)"
+if [[ ! -v "_evmfs" ]]; then
+  if [[ "${_evmfs_available}" != "" ]]; then
+    _evmfs="true"
+  elif [[ "${_evmfs_available}" == "" ]]; then
+    _evmfs="false"
+  fi
+fi
+if [[ ! -v "_git" ]]; then
+  _git="false"
+fi
+if [[ ! -v "_docs" ]]; then
+  _docs="true"
+fi
+if [[ ! -v "_offline" ]]; then
+  _offline="false"
+fi
+_py="python"
 _pkg=sdotool
 pkgbase="${_pkg}"
 pkgname=(
   "${_pkg}"
 )
 pkgver=0.0.0.0.0.0.0.0.0.0.0.0.0.1.1.1
-_commit="1190f131fe881911299aa1cb05b80c51cc527da9"
+_commit="b33cae899ca49a1f55473aa31ed79938028eae35"
 pkgrel=1
 _pkgdesc=(
   "Command-line SurfaceFlinger automation tool"
@@ -83,6 +103,11 @@ fi
 makedepends=(
   "make"
 )
+if [[ "${_docs}" == "true" ]]; then
+  makedepends+=(
+    "${_py}-docutils"
+  )
+fi
 checkdepends=(
   "shellcheck"
 )
@@ -93,33 +118,50 @@ _tag="${_commit}"
 _tag_name="commit"
 _tarname="${pkgname}-${_tag}"
 if [[ "${_offline}" == "true" ]]; then
-  url="file://${HOME}/${pkgname}"
+  _url="file://${HOME}/${pkgname}"
 fi
-if [[ "${_git}" == true ]]; then
+_evmfs_network="100"
+_evmfs_address="0x69470b18f8b8b5f92b48f6199dcb147b4be96571"
+_evmfs_ns="0x87003Bd6C074C713783df04f36517451fF34CBEf"
+_archive_sum="72b5fd922af02763d19e4db1b0acec31e83a4c4f1632630f4287fecc590faf4b"
+_evmfs_archive_uri="evmfs://${_evmfs_network}/${_evmfs_address}/${_evmfs_ns}/${_archive_sum}"
+_evmfs_archive_src="${_tarname}.zip::${_evmfs_archive_uri}"
+_archive_sig_sum="50fd9afa8e7afe4eb277d5b18a865bdb9b46abc47831489c2e18afd881fbb2e1"
+_archive_sig_uri="evmfs://${_evmfs_network}/${_evmfs_address}/${_evmfs_ns}/${_archive_sig_sum}"
+_archive_sig_src="${_tarname}.zip.sig::${_archive_sig_uri}"
+if [[ "${_evmfs}" == "true" ]]; then
+  makedepends+=(
+    "evmfs"
+  )
+  _src="${_evmfs_archive_src}"
+  _sum="${_archive_sum}"
+  source+=(
+    "${_archive_sig_src}"
+  )
+  sha256sums+=(
+    "${_archive_sig_sum}"
+  )
+elif [[ "${_git}" == true ]]; then
   makedepends+=(
     "git"
   )
-  source+=(
-    "${_tarname}::git+${_url}#${_tag_name}=${_tag}?signed"
-  )
-  sha256sums+=(
-    SKIP
-  )
+  _src="${_tarname}::git+${_url}#${_tag_name}=${_tag}?signed"
+  _sum="SKIP"
 elif [[ "${_git}" == false ]]; then
   if [[ "${_tag_name}" == 'pkgver' ]]; then
-    _tar="${_tarname}.tar.gz::${_url}/archive/refs/tags/${_tag}.tar.gz"
+    _src="${_tarname}.tar.gz::${_url}/archive/refs/tags/${_tag}.tar.gz"
     _sum="d4f4179c6e4ce1702c5fe6af132669e8ec4d0378428f69518f2926b969663a91"
   elif [[ "${_tag_name}" == "commit" ]]; then
-    _tar="${_tarname}.zip::${_url}/archive/${_commit}.zip"
-    _sum="1af27c8b9aeaa91fe0c92d448e1e6512d597dae3f53a07433153ba6138ac9655"
+    _src="${_tarname}.zip::${_url}/archive/${_commit}.zip"
+    _sum="${_archive_sum}"
   fi
-  source+=(
-    "${_tar}"
-  )
-  sha256sums+=(
-    "${_sum}"
-  )
 fi
+source=(
+  "${_src}"
+)
+sha256sums=(
+  "${_sum}"
+)
 validpgpkeys=(
   # Truocolo
   #   <truocolo@aol.com>
